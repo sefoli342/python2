@@ -1,0 +1,496 @@
+import pandas as pd
+import numpy as np
+data= pd.read_csv(r"C:\Users\SEFA\PycharmProjects\pythonProject\Yapay Zeka Arşiv\veriler.csv")
+
+class insan:
+    boy=100
+    def koşmak(self,b):
+        return b +150
+
+
+mehmet = insan()
+mehmet.koşmak(100)
+
+
+
+
+# Eksik veriler
+
+eksik_data=pd.read_csv(r"C:\Users\SEFA\PycharmProjects\pythonProject\Yapay Zeka Arşiv\eksikveriler.csv")
+
+eksik_data.isnull().sum()
+
+from sklearn.impute import SimpleImputer
+
+imputer=SimpleImputer(missing_values=np.nan, strategy="mean")
+
+
+yaş=eksik_data.iloc[:,1:4].values
+
+yaş=imputer.fit_transform(yaş[:,:])
+
+print(yaş)
+
+
+
+
+# kategorik veriler
+
+ülkeler=data.iloc[:,0:1].values
+
+from sklearn import preprocessing
+
+le=preprocessing.LabelEncoder()
+
+ülkeler[:,0]=le.fit_transform(data.iloc[:,0])
+
+
+ohe=preprocessing.OneHotEncoder()
+
+ülkeler = ohe.fit_transform(ülkeler).toarray()
+
+#verilerin birleştirilmesi
+
+ülke_frame=pd.DataFrame(data=ülkeler,columns=["France","Turkey","USA"])
+eksiksiz_frame=pd.DataFrame(data=yaş,columns=["boy","kilo","yaş"])
+
+last_frame=pd.concat([ülke_frame,eksiksiz_frame,data.iloc[:,4:5]],axis=1)
+
+
+from sklearn.model_selection import train_test_split
+
+x_train , x_test , y_train , y_test = train_test_split(last_frame.iloc[:,0:6],last_frame.iloc[:,6:],
+                                               test_size=0.33,random_state=0)
+
+#öznitelik ölçme
+from sklearn.preprocessing import StandardScaler
+new_x_test=StandardScaler().fit_transform(x_test)
+new_x_train=StandardScaler().fit_transform(x_train)
+
+
+#Doğrusal Regresyon
+
+data=pd.read_csv(r"C:\Users\SEFA\PycharmProjects\pythonProject\Yapay Zeka Arşiv\satislar.csv")
+
+x_train , x_test , y_train , y_test = train_test_split(data.iloc[:,0:1],data.iloc[:,1:],
+                                               test_size=0.33,random_state=0)
+
+x_train=x_train.sort_index()
+y_train=y_train.sort_index()
+x_test=x_test.sort_index()
+y_test=y_test.sort_index()
+
+#öznitelik ölçme
+from sklearn.preprocessing import StandardScaler
+new_x_test=StandardScaler().fit_transform(x_test)
+new_x_train=StandardScaler().fit_transform(x_train)
+new_y_test=StandardScaler().fit_transform(y_test)
+new_y_train=StandardScaler().fit_transform(y_train)
+
+from sklearn.linear_model import LinearRegression
+lr=LinearRegression()
+lr.fit(new_x_train,new_y_train)
+lr.predict(new_x_test)
+
+# Not scale
+
+lr.fit(x_train,y_train)
+prediction=lr.predict(x_test)
+
+from sklearn.metrics import mean_absolute_error as mae
+from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import mean_absolute_percentage_error as mape
+from sklearn.metrics import r2_score
+mae_result=mae(y_test,prediction)
+mse_result=mse(y_test,prediction)
+mape_result=mape(y_test,prediction)
+r_result=r2_score(y_test,prediction)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+print("r"+str(r_result))
+#görselleştirme
+
+import matplotlib.pyplot as plt
+
+plt.plot(x_train,y_train)
+plt.plot(x_test,prediction)
+plt.show()
+
+plt.scatter(x_test,y_test,color="r")
+plt.plot(x_test,prediction)
+plt.show()
+
+
+#Backward elimination tüm değişkenler alınır , en büyük P-value olan ele alınır,
+#Eğer P>SL ise bu değişken kaldırılır, sistem tekrar çalıştırılır, P>SL değişken kalmayana kadar devam eder.
+
+
+#Forward Selection tek tüm değişkenler ele alınır, en düşük p-value a sahip değişken ele alınır.
+# p<SL şartı sağlanıyorsa değişken eklemeye devam ederiz yoksa bitiririz
+
+
+#veri ön hazırlık
+
+data= pd.read_csv(r"C:\Users\SEFA\PycharmProjects\pythonProject\Yapay Zeka Arşiv\veriler.csv")
+
+#cinsiyet encode
+
+gender=data.iloc[:,4:5].values
+gender[:,0]=le.fit_transform(data.iloc[:,4])
+
+gender=ohe.fit_transform(gender).toarray()
+
+#last frame : yukarıda encode edilen ülkeler kolonunu da kapsayan data frame
+gender_frame=pd.DataFrame(data=gender[:,1],columns=["Kadın"])
+
+last_data=pd.concat([last_frame.iloc[:,:6],gender_frame],axis=1)
+
+
+x_train , x_test , y_train , y_test = train_test_split(last_data.iloc[:,:6],last_data.iloc[:,6:7],
+                                               test_size=0.33,random_state=105)
+
+last_data.corr()
+#Çoklu linear regresyon - Cinsiyet tahmini
+
+from sklearn.linear_model import LinearRegression
+
+regressor = LinearRegression()
+regressor.fit(x_train,y_train)
+
+y_pred=regressor.predict(x_test)
+
+mae_result=mae(y_test,y_pred)
+mse_result=mse(y_test,y_pred)
+mape_result=mape(y_test,y_pred)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+
+
+
+
+#Çoklu linear regresyon - Boy  tahmini
+
+ülke=last_data.iloc[:,0:3]
+others=last_data.iloc[:,4:7]
+boy=last_data.iloc[:,3:4]
+
+x=pd.concat([ülke,others],axis=1)
+
+x_train , x_test , y_train , y_test = train_test_split(x,boy,
+                                               test_size=0.33,random_state=71)
+
+
+
+regressor1=LinearRegression()
+regressor1.fit(x_train,y_train)
+y_pred1=regressor1.predict(x_test)
+
+mae_result=mae(y_test,y_pred1)
+mse_result=mse(y_test,y_pred1)
+mape_result=mape(y_test,y_pred1)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+
+
+#Backward elemination
+
+import statsmodels.api as sm
+
+k=np.append(arr=np.ones((22,1)).astype(int),values=x,axis=1)
+
+k_l=x.iloc[:,[0,1,2,3,4,5]].values
+k_l=np.array(k_l,dtype=float)
+model=sm.OLS(boy,k_l).fit()
+print(model.summary())
+
+#Max P-value çıkarılır
+
+k_l=x.iloc[:,[0,1,2,3,5]].values
+k_l=np.array(k_l,dtype=float)
+model=sm.OLS(boy,k_l).fit()
+print(model.summary())
+
+#max P_value çıkarılır
+
+k_l=x.iloc[:,[0,1,2,3]].values
+k_l=np.array(k_l,dtype=float)
+model=sm.OLS(boy,k_l).fit()
+print(model.summary())
+
+
+
+#Ödev
+
+tenis_data= pd.read_csv(r"C:\Users\SEFA\PycharmProjects\pythonProject\Yapay Zeka Arşiv\odev_tenis.csv")
+tenis_data["outlook"].nunique()
+
+#outlook encoding
+
+outlook=tenis_data.iloc[:,0:1].values
+
+outlook[:,0]=le.fit_transform(tenis_data.iloc[:,0])
+
+
+ohe=preprocessing.OneHotEncoder()
+
+outlook = ohe.fit_transform(outlook).toarray()
+
+outlook=pd.DataFrame(data=outlook,columns=["Overcast","Rainy","Sunny"])
+
+#Windy encoding
+
+windy=tenis_data["windy"].astype(int)
+#False : 0 , True : 1
+windy=pd.DataFrame(data=windy,columns=["windy"])
+#Play encoding
+
+play=tenis_data.iloc[:,4:5].values
+
+play[:,0]=le.fit_transform(tenis_data.iloc[:,4])
+play=pd.DataFrame(data=play,columns=["play"])
+#no:0 yes :1
+
+#Veriyi birleştirme
+
+l_data=pd.concat([outlook,tenis_data.iloc[:,1:3],windy,play],axis=1)
+#Humidity Prediction
+V=pd.concat([l_data.iloc[:,:4],l_data.iloc[:,5:]],axis=1)
+Humadity=l_data["humidity"]
+#Correlation of Data
+cor_matrix=l_data.corr()
+upper_tri = cor_matrix.where(np.triu(np.ones(cor_matrix.shape), k=1).astype(np.bool))
+from sklearn.model_selection import train_test_split
+
+x_train,x_test,y_train,y_test=train_test_split(V,Humadity,test_size=0.33,random_state=16581)
+
+
+from sklearn.linear_model import LinearRegression
+
+lr=LinearRegression()
+lr.fit(x_train,y_train)
+prediction1=lr.predict(x_test).reshape((5,1))
+
+mae_result=mae(y_test,prediction1)
+mse_result=mse(y_test,prediction1)
+mape_result=mape(y_test,prediction1)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+
+
+#backward elemination
+
+m_l=V.iloc[:,[0,1,2,3,4,5]].values
+m_l=np.array(m_l,dtype=float)
+model=sm.OLS(Humadity,m_l).fit()
+print(model.summary())
+
+#x5 atılır
+m_l=V.iloc[:,[0,1,2,3,5]].values
+m_l=np.array(m_l,dtype=float)
+model=sm.OLS(Humadity,m_l).fit()
+print(model.summary())
+
+#x3 atılır
+
+m_l=V.iloc[:,[0,1,3,5]].values
+m_l=np.array(m_l,dtype=float)
+model=sm.OLS(Humadity,m_l).fit()
+print(model.summary())
+
+#x1 atılır
+m_l=V.iloc[:,[1,3,5]].values
+m_l=np.array(m_l,dtype=float)
+model=sm.OLS(Humadity,m_l).fit()
+print(model.summary())
+
+
+x_train,x_test,y_train,y_test=train_test_split(m_l,Humadity,test_size=0.33,random_state=16581)
+
+lr.fit(x_train,y_train)
+prediction2=lr.predict(x_test).reshape((5,1))
+
+
+
+
+
+mae_result=mae(y_test,prediction1)
+mse_result=mse(y_test,prediction1)
+mape_result=mape(y_test,prediction1)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+
+
+print("LAST RESULTS")
+
+mae_result=mae(y_test,prediction2)
+mse_result=mse(y_test,prediction2)
+mape_result=mape(y_test,prediction2)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+
+
+
+#Polynomial regression
+
+data1=pd.read_csv(r"C:\Users\SEFA\PycharmProjects\pythonProject\Yapay Zeka Arşiv\maaş.csv")
+plt.plot(data1.iloc[:,1:2],data1.iloc[:,2:])
+plt.show()
+
+x=data1.iloc[:,1:2].values
+y=data1.iloc[:,2:].values
+#LinearReg
+from sklearn.linear_model import LinearRegression
+lr=LinearRegression()
+lr.fit(x,y)
+plt.scatter(x,y)
+plt.plot(x,lr.predict(x),color="r")
+plt.show()
+
+
+
+
+
+
+
+
+
+#PolynomialReg
+from sklearn.preprocessing import PolynomialFeatures
+import numpy as np
+p_reg=PolynomialFeatures(degree=2)
+x_poly=p_reg.fit_transform(x)
+lr1=LinearRegression()
+lr1.fit(x_poly,y)
+pred2=lr1.predict(x_poly)
+
+
+
+plt.scatter(x,y,color="red")
+plt.plot(x,pred2)
+plt.show()
+
+print(lr1.predict(p_reg.fit_transform([[15]])))
+
+#higher degree
+p3=PolynomialFeatures(degree=4)
+x3_poly=p3.fit_transform(x)
+lr2=LinearRegression()
+lr2.fit(x3_poly,y)
+pred3=lr2.predict(x3_poly)
+
+plt.scatter(x,y,color="red")
+plt.plot(x,pred3)
+plt.show()
+
+lr2.predict(p3.fit_transform([[15]]))
+#bu yapı degreeler değişse de aynı kalır.
+
+print("########DEGREEE=2########")
+mae_result=mae(y,pred2)
+mse_result=mse(y,pred2)
+mape_result=mape(y,pred2)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+print("R2 : "+str(r2_score(y,pred2)))
+
+print("########DEGREEE=4########")
+
+mae_result=mae(y,pred3)
+mse_result=mse(y,pred3)
+mape_result=mape(y,pred3)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+print("R2 : "+str(r2_score(y,pred3)))
+
+
+#SVR
+x=data1.iloc[:,1:2].values
+y=data1.iloc[:,2:].values
+
+from sklearn.svm import SVR
+
+regs=SVR(kernel="rbf")
+std=StandardScaler()
+x_s=std.fit_transform(x)
+y_s=std.fit_transform(y)
+
+regs.fit(x_s,y_s)
+pp=regs.predict(x_s).reshape((10,1))
+
+x_s_i=std.inverse_transform(x_s)
+y_s_i=std.inverse_transform(y_s)
+p_i=std.inverse_transform(pp)
+
+
+
+plt.scatter(x_s_i,y_s_i)
+plt.plot(x_s_i,p_i,color="black")
+plt.show()
+
+
+
+mae_result=mae(y,p_i)
+mse_result=mse(y,p_i)
+mape_result=mape(y,p_i)
+print("mean absolute error: " + str(mae_result))
+print("mean squared error: " + str(mse_result))
+print("mean absolute pertentage error: " + str(mape_result))
+print("R2 : "+str(r2_score(y,p_i)))
+
+
+#Decision Tree
+
+from sklearn.tree import DecisionTreeRegressor
+x=data1.iloc[:,1:2].values
+y=data1.iloc[:,2:].values
+
+d_reg=DecisionTreeRegressor(random_state=10)
+d_reg.fit(x,y)
+d_reg.predict(x)
+
+d_reg.predict([[5]])
+d_reg.predict([[9000000000000000000]])
+
+########RANDOM FOREST########
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+import matplotlib.pyplot as plt
+data1=pd.read_csv(r"C:\Users\SEFA\PycharmProjects\pythonProject\Yapay Zeka Arşiv\maaş.csv")
+x=data1.iloc[:,1:2].values
+y=data1.iloc[:,2:].values
+
+
+rf_reg= RandomForestRegressor(n_estimators=10, random_state=0)
+
+rf_reg.fit(x,y.ravel())
+
+rf_reg.predict([[20]])
+rf_reg.predict([[5.5]])
+
+plt.scatter(x,y,color="r")
+plt.plot(x,rf_reg.predict(x))
+plt.show()
+
+############ Modellerin değerlendirilmesi
+
+from sklearn.metrics import r2_score
+print('#### Random Forest R2: '+str(r2_score(y,rf_reg.predict(x))))
+print("#### Decision Tree R2: "+str(r2_score(y,d_reg.predict(x))))
+print("#### SVR R2 : "+str(r2_score(y,p_i)))
+print('#### Polynomial R2: '+str(r2_score(y,pred2)))
+
+
+
+
+
+
+
